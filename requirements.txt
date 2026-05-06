@@ -1,0 +1,5 @@
+requests
+playwright
+rich
+python-dotenv
+beautifulsoup4
