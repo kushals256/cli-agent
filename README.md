@@ -135,7 +135,7 @@ Open the generated `index.html` in your browser to see the result.
 |---------------------|-------------|
 | `NVIDIA_API_KEY` | Your NVIDIA API key for the Gemma model |
 
-The agent uses the `google/gemma-3n-e2b-it` model by default. You can change this in `agent.py`.
+The agent uses the `meta/llama-3.1-8b-instruct` model via NVIDIA's OpenAI-compatible API. You can change this in `agent.py`.
 
 ---
 

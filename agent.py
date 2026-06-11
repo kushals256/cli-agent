@@ -89,7 +89,7 @@ def extract_json_from_response(text):
 
 
 class Agent:
-    def __init__(self, model="google/gemma-3n-e2b-it"):
+    def __init__(self, model="meta/llama-3.1-8b-instruct"):
         self.llm = LLM(model=model)
         self.registry = ToolRegistry()
         register_all_tools(self.registry)
@@ -137,6 +137,7 @@ class Agent:
         step_count = 0
         retries = 0
         max_retries = 3
+        finished = False
         
         while step_count < max_steps:
             step_count += 1
@@ -169,6 +170,7 @@ class Agent:
                 callback(state)
 
             if state["step"] == "OUTPUT":
+                finished = True
                 break
 
             if state["step"] in ["START", "THINK"]:
@@ -193,7 +195,7 @@ class Agent:
                 if callback:
                     callback(observe_msg)
         
-        if step_count >= max_steps:
+        if not finished and step_count >= max_steps:
             max_step_msg = {
                 "step": "OUTPUT",
                 "content": "Maximum steps reached. Stopping to save API credits."

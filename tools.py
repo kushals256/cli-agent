@@ -20,18 +20,74 @@ class ToolRegistry:
 
     def cleanup(self):
         if self.browser:
-            self.browser.close()
+            try:
+                self.browser.close()
+            except Exception:
+                pass
+            self.browser = None
         if self.playwright:
-            self.playwright.stop()
+            try:
+                self.playwright.stop()
+            except Exception:
+                pass
+            self.playwright = None
+        self.page = None
+
+def _reset_browser(registry):
+    """Tear down a partial/failed browser session so the next open can retry."""
+    if registry.browser:
+        try:
+            registry.browser.close()
+        except Exception:
+            pass
+    if registry.playwright:
+        try:
+            registry.playwright.stop()
+        except Exception:
+            pass
+    registry.playwright = None
+    registry.browser = None
+    registry.page = None
+
+
+def ensure_playwright_browsers():
+    """Download Chromium if missing. Safe to call on every startup."""
+    result = subprocess.run(
+        ["playwright", "install", "chromium"],
+        capture_output=True,
+        text=True,
+        timeout=300,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            "Failed to install Playwright browsers.\n"
+            "  Run manually: playwright install chromium"
+        )
+    return "Playwright Chromium is ready."
+
+
+def _ensure_browser(registry):
+    if registry.page:
+        return
+    registry.playwright = sync_playwright().start()
+    registry.browser = registry.playwright.chromium.launch(headless=True)
+    registry.page = registry.browser.new_page()
+
 
 def browser_open(registry, url, **kwargs):
-    if not registry.playwright:
-        registry.playwright = sync_playwright().start()
-        registry.browser = registry.playwright.chromium.launch(headless=True)
-        registry.page = registry.browser.new_page()
-    
-    registry.page.goto(url)
-    return f"Opened {url} successfully."
+    try:
+        _ensure_browser(registry)
+        registry.page.goto(url, wait_until="domcontentloaded", timeout=30000)
+        return f"Opened {url} successfully."
+    except Exception as e:
+        _reset_browser(registry)
+        error = str(e)
+        if "Executable doesn't exist" in error:
+            return (
+                "Playwright browser not installed. Run: playwright install chromium\n"
+                f"Details: {error}"
+            )
+        raise
 
 def browser_extract_dom(registry, **kwargs):
     if not registry.page:

@@ -1,4 +1,4 @@
-requests
+openai
 playwright
 rich
 python-dotenv
